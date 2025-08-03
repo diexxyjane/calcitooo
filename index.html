@@ -222,7 +222,9 @@
         <label>Competitor Resident Geofences</label><input type="number" id="compTargets" />
         <label>Employer Geofences</label><input type="number" id="empTargets" />
         <label>POI Geofences</label><input type="number" id="poiTargets" />
-        <label>Emp-POI Geofences</label><input type="number" id="combinedTargets" />
+        <label> Emp-POI Geofences / Isolation 1</label><input type="number" id="combinedTargets" />
+        <label>Isolation 2</label><input type="number" id="isolation2Targets" />
+        <label>Other Campaign Geofences</label><input type="number" id="otherTargets" />
         <label>Competitor-Resident Streaming TV</label>
         <div class="inline-row"><button type="button" onclick="calculateCompTV()">Calculate</button><input type="number" id="compStreamingTV" /></div>
         <label>Hulu Competitor-Resident Streaming TV</label>
@@ -289,56 +291,71 @@
       calculateAddrTV();
     }
 
-    function calculateBudgets() {
-      const total = parseFloat(document.getElementById('packageBudget').value) || 0;
-      const comp = +document.getElementById('compTargets').value || 0;
-      const emp = +document.getElementById('empTargets').value || 0;
-      const poi = +document.getElementById('poiTargets').value || 0;
-      const comb = +document.getElementById('combinedTargets').value || 0;
+function calculateBudgets() {
+  // 1. Get all values first
+  const total = parseFloat(document.getElementById('packageBudget').value) || 0;
+  const comp = +document.getElementById('compTargets').value || 0;
+  const emp = +document.getElementById('empTargets').value || 0;
+  const poi = +document.getElementById('poiTargets').value || 0;
+  const comb = +document.getElementById('combinedTargets').value || 0;
+  const iso2 = +document.getElementById('isolation2Targets').value || 0;
+  const other = +document.getElementById('otherTargets').value || 0;
 
-      const site = +document.getElementById('siteRetargeting').value || 0;
-      const search = +document.getElementById('searchRetargeting').value || 0;
-      const retargetingTotal = site + search;
+  const site = +document.getElementById('siteRetargeting').value || 0;
+  const search = +document.getElementById('searchRetargeting').value || 0;
+  const retargetingTotal = site + search;
 
-      const retvTier = +document.getElementById('retvTier').value;
-      let retv = 0, hulu = 0;
-      if (retvTier === 1) [retv, hulu] = [95, 35];
-      else if (retvTier === 2) [retv, hulu] = [190, 70];
-      else if (retvTier === 3) [retv, hulu] = [285, 105];
-      else if (retvTier === 4) [retv, hulu] = [380, 140];
+  const retvTier = +document.getElementById('retvTier').value;
+  let retv = 0, hulu = 0;
+  if (retvTier === 1) [retv, hulu] = [95, 35];
+  else if (retvTier === 2) [retv, hulu] = [190, 70];
+  else if (retvTier === 3) [retv, hulu] = [285, 105];
+  else if (retvTier === 4) [retv, hulu] = [380, 140];
 
-      const compTV = +document.getElementById('compStreamingTV').value || 0;
-      const huluComp = +document.getElementById('huluCompTVBudget').value || 0;
+  const compTV = +document.getElementById('compStreamingTV').value || 0;
+  const huluComp = +document.getElementById('huluCompTVBudget').value || 0;
 
-      const addrYes = document.getElementById('includeAddressable').value === 'yes';
-      const addrTV = +document.getElementById('addressableTVBudget').value || 0;
-      const huluAddr = +document.getElementById('huluAddrTVBudget').value || 0;
-      const addr = addrYes ? total * 0.5 - addrTV - huluAddr : 0;
+  const addrYes = document.getElementById('includeAddressable').value === 'yes';
+  const addrTV = +document.getElementById('addressableTVBudget').value || 0;
+  const huluAddr = +document.getElementById('huluAddrTVBudget').value || 0;
+  const addr = addrYes ? total * 0.5 - addrTV - huluAddr : 0;
 
-      const allocated = addr + addrTV + huluAddr + compTV + huluComp + retargetingTotal;
-      const remaining = Math.max(total - allocated, 0);
-      const totalTargets = comp + emp + poi + comb || 1;
+  const allocated = addr + addrTV + huluAddr + compTV + huluComp + retargetingTotal + retv + hulu;
+  const remaining = Math.max(total - allocated, 0);
+  const totalTargets = comp + emp + poi + comb + iso2 + other || 1;
 
-      const resultsHTML = `
-        <div><span class="highlight">Total Package Budget:</span> <span class="value">$${round2(total)}</span></div>
-        <div><span class="highlight">Addressable Campaign:</span> <span class="value">$${round2(addr)}</span></div>
-        <div><span class="highlight">Addressable Streaming TV:</span> <span class="value">$${round2(addrTV)}</span></div>
-        ${huluAddr ? `<div><span class="highlight">Hulu Addressable Streaming TV:</span> <span class="value">$${round2(huluAddr)}</span></div>` : ''}
-        <div><span class="highlight">Competitor Resident Streaming TV:</span> <span class="value">$${round2(compTV)}</span></div>
-        ${huluComp ? `<div><span class="highlight">Hulu Competitor Resident Streaming TV:</span> <span class="value">$${round2(huluComp)}</span></div>` : ''}
-        <div><span class="highlight">Site Retargeting:</span> <span class="value">$${round2(site)}</span></div>
-        <div><span class="highlight">Search Retargeting:</span> <span class="value">$${round2(search)}</span></div>
-        ${retv ? `<div><span class="highlight">ReTV Budget:</span> <span class="value">$${round2(retv)}</span></div>
-                  <div><span class="highlight">Hulu (ReTV):</span> <span class="value">$${round2(hulu)}</span></div>` : ''}
-        <hr/>
-        <div><span class="highlight">Competitor Resident Geofences:</span> <span class="value">$${round2((remaining * comp) / totalTargets)}</span></div>
-        <div><span class="highlight">Employer Geofences:</span> <span class="value">$${round2((remaining * emp) / totalTargets)}</span></div>
-        <div><span class="highlight">POI Geofences:</span> <span class="value">$${round2((remaining * poi) / totalTargets)}</span></div>
-        <div><span class="highlight">Emp-POI Geofences:</span> <span class="value">$${round2((remaining * comb) / totalTargets)}</span></div>
-      `;
+  // 2. Then start resultsHTML after all calculations are done
+  let resultsHTML = '';
 
-      document.getElementById('results').innerHTML = resultsHTML;
-    }
+  resultsHTML += `<div><span class="highlight">Total Package Budget:</span> <span class="value">$${round2(total)}</span></div>`;
+
+  if (addrYes && addr > 0) resultsHTML += `<div><span class="highlight">Addressable Campaign:</span> <span class="value">$${round2(addr)}</span></div>`;
+  if (addrTV > 0) resultsHTML += `<div><span class="highlight">Addressable Streaming TV:</span> <span class="value">$${round2(addrTV)}</span></div>`;
+  if (huluAddr > 0) resultsHTML += `<div><span class="highlight">Hulu Addressable Streaming TV:</span> <span class="value">$${round2(huluAddr)}</span></div>`;
+
+  if (compTV > 0) resultsHTML += `<div><span class="highlight">Competitor Resident Streaming TV:</span> <span class="value">$${round2(compTV)}</span></div>`;
+  if (huluComp > 0) resultsHTML += `<div><span class="highlight">Hulu Competitor Resident Streaming TV:</span> <span class="value">$${round2(huluComp)}</span></div>`;
+
+  if (site > 0) resultsHTML += `<div><span class="highlight">Site Retargeting:</span> <span class="value">$${round2(site)}</span></div>`;
+  if (search > 0) resultsHTML += `<div><span class="highlight">Search Retargeting:</span> <span class="value">$${round2(search)}</span></div>`;
+
+  if (retv > 0) {
+    resultsHTML += `<div><span class="highlight">ReTV Budget:</span> <span class="value">$${round2(retv)}</span></div>`;
+    resultsHTML += `<div><span class="highlight">Hulu (ReTV):</span> <span class="value">$${round2(hulu)}</span></div>`;
+  }
+
+  if ((comp + emp + poi + comb + iso2 + other) > 0 && remaining > 0) {
+    resultsHTML += `<hr/>`;
+    if (comp > 0) resultsHTML += `<div><span class="highlight">Competitor Resident Geofences:</span> <span class="value">$${round2((remaining * comp) / totalTargets)}</span></div>`;
+    if (emp > 0) resultsHTML += `<div><span class="highlight">Employer Geofences:</span> <span class="value">$${round2((remaining * emp) / totalTargets)}</span></div>`;
+    if (poi > 0) resultsHTML += `<div><span class="highlight">POI Geofences:</span> <span class="value">$${round2((remaining * poi) / totalTargets)}</span></div>`;
+    if (comb > 0) resultsHTML += `<div><span class="highlight">Emp-POI Geofences / Isolation 1:</span> <span class="value">$${round2((remaining * comb) / totalTargets)}</span></div>`;
+    if (iso2 > 0) resultsHTML += `<div><span class="highlight">Isolation 2 Geofences:</span> <span class="value">$${round2((remaining * iso2) / totalTargets)}</span></div>`;
+    if (other > 0) resultsHTML += `<div><span class="highlight">Other Campaign Geofences:</span> <span class="value">$${round2((remaining * other) / totalTargets)}</span></div>`;
+  }
+
+  document.getElementById('results').innerHTML = resultsHTML;
+}
 
     function resetAll() {
       document.querySelectorAll('input, select').forEach(el => el.value = el.tagName === 'SELECT' ? el.options[0].value : '');
